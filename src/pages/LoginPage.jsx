@@ -33,6 +33,9 @@ export default function LoginPage() {
       // حسب الدور يُدار من التطبيق.
       navigate('/')
     } catch (e) {
+      // الجلسة قد تكون أُنشئت فعلاً رغم رمي الاستثناء (تعارض قفل المصادقة)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) { navigate('/'); return }   // نجح الدخول فعلياً
       setError('تعذّر تسجيل الدخول. حاول مرة أخرى.')
     } finally {
       setLoading(false)
