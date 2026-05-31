@@ -63,7 +63,7 @@ export default function SupportInboxPage() {
   const sendReply = async () => {
     if (!text.trim() || !active || sending) return
     setSending(true)
-    const { data } = await supabase.from('support_messages').insert({
+    const { data, error } = await supabase.from('support_messages').insert({
       thread_id: active.id,
       sender_id: user.id,
       sender_name: profile?.full_name || 'موظف',
@@ -71,7 +71,10 @@ export default function SupportInboxPage() {
       is_staff: true,
       is_read: false
     }).select().single()
-    if (data) {
+    if (error) {
+      console.error('reply failed', error)
+      alert('تعذّر إرسال الرد: ' + error.message)
+    } else if (data) {
       setMessages(p => [...p, data])
       setText('')
       await supabase.from('support_threads').update({ updated_at: new Date().toISOString() }).eq('id', active.id)
