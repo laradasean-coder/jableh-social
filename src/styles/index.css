@@ -150,6 +150,19 @@ html { scroll-behavior: smooth; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* ─── إصلاح عام للنوافذ المنبثقة (Modals) ───────────────────
+   المشكلة: على شاشة اللابتوب (ارتفاع منخفض) كانت النافذة أطول من الشاشة،
+   فتُقصّ من الأعلى والأسفل ويختفي زرّا الإغلاق والحفظ بلا إمكانية تمرير.
+   الحل: تقييد صندوق النافذة بـ90% من ارتفاع الشاشة مع تمرير داخلي،
+   بحيث تبقى كل الأزرار قابلة للوصول على أي حجم شاشة.
+   يستهدف فقط النوافذ المتمركزة (items-center + justify-center)،
+   ولا يمسّ المركز العائم لأنه لا يستخدم هذا النمط. */
+.fixed.inset-0.items-center.justify-center > * {
+  max-height: 90vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 /* الوضع الليلي للوحات العائمة */
 .dark .hub-panel { background: var(--bg-card) !important; }
 .dark .hub-panel .bg-gray-50 { background: var(--bg-secondary) !important; }
