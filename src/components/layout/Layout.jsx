@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useDarkMode } from '../../hooks/useDarkMode'
@@ -16,7 +16,7 @@ import {
   HeartHandshake, LogIn, LogOut, Menu, X, Shield,
   FileText, ClipboardList, Activity, UserCog, Key,
   TrendingUp, MessageSquare, Search, Gauge, Map, Moon, Sun,
-  Newspaper, Award
+  Newspaper, Award, ChevronLeft, ChevronRight
 } from 'lucide-react'
 
 const navItems = [
@@ -70,6 +70,21 @@ export default function Layout() {
   const { settings, isEnabled } = useSiteSettings()
 
   const visible = navItems.filter(i => navVisible(profile, i, !!user))
+
+  // تمرير شريط أقسام سطح المكتب عبر أزرار (يمين/يسار) عندما تفيض الأقسام
+  const navScrollRef = useRef(null)
+  const [navOverflow, setNavOverflow] = useState(false)
+  useEffect(() => {
+    const el = navScrollRef.current
+    if (!el) return
+    const update = () => setNavOverflow(el.scrollWidth - el.clientWidth > 4)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    window.addEventListener('resize', update)
+    return () => { ro.disconnect(); window.removeEventListener('resize', update) }
+  }, [visible.length])
+  const scrollNav = (dir) => navScrollRef.current?.scrollBy({ left: dir * 280, behavior: 'smooth' })
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
@@ -136,15 +151,31 @@ export default function Layout() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:block border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 flex gap-0.5 overflow-x-auto py-1 scrollbar-hide">
-            {visible.map(i => (
-              <NavLink key={i.to} to={i.to} end={i.to==='/'}
-                className={({isActive})=>`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors
-                  ${isActive?'text-white':'text-white/70 hover:text-white hover:bg-white/10'}`}
-                style={({isActive})=>isActive?{background:'rgba(201,162,39,0.25)',color:'#E8C84A'}:{}}>
-                <i.icon size={13}/>{i.label}
-              </NavLink>
-            ))}
+          <div className="max-w-7xl mx-auto px-2 flex items-center gap-1">
+            {navOverflow && (
+              <button type="button" onClick={() => scrollNav(1)}
+                className="shrink-0 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+                aria-label="تمرير الأقسام لليمين">
+                <ChevronRight size={18}/>
+              </button>
+            )}
+            <div ref={navScrollRef} className="flex-1 flex gap-0.5 overflow-x-auto py-1 scrollbar-hide scroll-smooth">
+              {visible.map(i => (
+                <NavLink key={i.to} to={i.to} end={i.to==='/'}
+                  className={({isActive})=>`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors
+                    ${isActive?'text-white':'text-white/70 hover:text-white hover:bg-white/10'}`}
+                  style={({isActive})=>isActive?{background:'rgba(201,162,39,0.25)',color:'#E8C84A'}:{}}>
+                  <i.icon size={13}/>{i.label}
+                </NavLink>
+              ))}
+            </div>
+            {navOverflow && (
+              <button type="button" onClick={() => scrollNav(-1)}
+                className="shrink-0 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+                aria-label="تمرير الأقسام لليسار">
+                <ChevronLeft size={18}/>
+              </button>
+            )}
           </div>
         </nav>
 
