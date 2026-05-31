@@ -20,20 +20,24 @@ export default function SupportChat({ active = true, onUnread }) {
   const [text,     setText]     = useState('')
   const [sending,  setSending]  = useState(false)
   const [thread,   setThread]   = useState(null)
+  const [error,    setError]    = useState('')
   const bottomRef = useRef(null)
 
   const isStaff = profile?.role === 'admin' || profile?.role === 'staff'
 
   const getOrCreateThread = useCallback(async () => {
     if (!user || isStaff) return null
-    const { data: existing } = await supabase
+    const { data: existing, error: selErr } = await supabase
       .from('support_threads').select('id')
-      .eq('user_id', user.id).eq('status', 'open').maybeSingle()
+      .eq('user_id', user.id).eq('status', 'open')
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (selErr) { console.error('thread lookup failed', selErr); setError('تعذّر الوصول إلى محادثاتك: ' + selErr.message); return null }
     if (existing) return existing.id
-    const { data: created } = await supabase
+    const { data: created, error: insErr } = await supabase
       .from('support_threads')
       .insert({ user_id: user.id, user_name: profile?.full_name || user.email })
       .select('id').single()
+    if (insErr) { console.error('thread create failed', insErr); setError('تعذّر بدء المحادثة: ' + insErr.message); return null }
     return created?.id
   }, [user, profile, isStaff])
 
@@ -83,6 +87,7 @@ export default function SupportChat({ active = true, onUnread }) {
   const sendMessage = async () => {
     if (!text.trim() || sending || !user) return
     setSending(true)
+    setError('')
     let tid = thread
     if (!tid) { tid = await getOrCreateThread(); setThread(tid) }
     if (!tid) { setSending(false); return }
@@ -91,8 +96,11 @@ export default function SupportChat({ active = true, onUnread }) {
       sender_name: profile?.full_name || user.email,
       content: text.trim(), is_staff: isStaff, is_read: false
     }
-    const { data } = await supabase.from('support_messages').insert(msg).select().single()
-    if (data) {
+    const { data, error: sendErr } = await supabase.from('support_messages').insert(msg).select().single()
+    if (sendErr) {
+      console.error('send message failed', sendErr)
+      setError('تعذّر إرسال الرسالة: ' + sendErr.message)
+    } else if (data) {
       setMessages(p => [...p, data]); setText('')
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     }
@@ -133,8 +141,12 @@ export default function SupportChat({ active = true, onUnread }) {
       </div>
 
       {/* Input — مسافة كافية بين الحقل وزر الإرسال */}
-      <div className="p-3 bg-white border-t border-gray-100 flex items-center gap-3 shrink-0"
+      <div className="bg-white border-t border-gray-100 shrink-0"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        {error && (
+          <p className="text-xs text-red-600 bg-red-50 px-3 py-2 mx-3 mt-2 rounded-lg">{error}</p>
+        )}
+        <div className="p-3 flex items-center gap-3">
         <input
           className="flex-1 input text-sm py-2.5"
           placeholder="اكتب رسالتك..."
@@ -149,6 +161,7 @@ export default function SupportChat({ active = true, onUnread }) {
           style={{ background: text.trim() ? '#0D4A35' : undefined }} aria-label="إرسال">
           {sending ? <RefreshCw size={18} className="animate-spin"/> : <Send size={18}/>}
         </button>
+        </div>
       </div>
     </div>
   )
