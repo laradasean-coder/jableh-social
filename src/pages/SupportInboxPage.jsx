@@ -16,6 +16,7 @@ export default function SupportInboxPage() {
   const [sending,  setSending]  = useState(false)
   const [loading,  setLoading]  = useState(false)
   const bottomRef = useRef(null)
+  const threadChRef = useRef(null)
 
   useEffect(() => {
     if (!profile || !['admin','staff'].includes(profile.role)) { navigate('/'); return }
@@ -25,7 +26,10 @@ export default function SupportInboxPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'support_threads' }, () => fetchThreads())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_messages' }, () => fetchThreads())
       .subscribe()
-    return () => supabase.removeChannel(ch)
+    return () => {
+      supabase.removeChannel(ch)
+      if (threadChRef.current) { supabase.removeChannel(threadChRef.current); threadChRef.current = null }
+    }
   }, [profile])
 
   const fetchThreads = async () => {
@@ -62,15 +66,16 @@ export default function SupportInboxPage() {
     setThreads(p => p.map(th => th.id === t.id ? { ...th, unread: 0 } : th))
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
 
-    // Realtime for this thread
+    // Realtime for this thread — أزل الاشتراك السابق أولاً لمنع التكرار وتسرّب القنوات
+    if (threadChRef.current) { supabase.removeChannel(threadChRef.current); threadChRef.current = null }
     const ch = supabase.channel(`inbox-${t.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_messages', filter: `thread_id=eq.${t.id}` },
         (payload) => {
-          setMessages(p => [...p, payload.new])
+          setMessages(p => p.some(m => m.id === payload.new.id) ? p : [...p, payload.new])
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
         })
       .subscribe()
-    return () => supabase.removeChannel(ch)
+    threadChRef.current = ch
   }, [])
 
   const sendReply = async () => {
@@ -88,7 +93,7 @@ export default function SupportInboxPage() {
       console.error('reply failed', error)
       alert('تعذّر إرسال الرد: ' + error.message)
     } else if (data) {
-      setMessages(p => [...p, data])
+      setMessages(p => p.some(m => m.id === data.id) ? p : [...p, data])
       setText('')
       await supabase.from('support_threads').update({ updated_at: new Date().toISOString() }).eq('id', active.id)
     }
