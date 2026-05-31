@@ -50,29 +50,25 @@ export default function LoginPage() {
     if (su.password !== su.confirm) return setError('كلمتا المرور غير متطابقتين')
     setLoading(true)
     try {
-      const { data, error: signErr } = await supabase.auth.signUp({
+      // لا نُسجّل الدخول ولا نُدرج الجمعية يدوياً.
+      // سجل الجمعية يُنشئه تريغر قاعدة البيانات تلقائياً من بيانات الميتاداتا
+      // (assoc_name)، فيعمل دون جلسة ومع تفعيل تأكيد البريد.
+      const { error: signErr } = await supabase.auth.signUp({
         email: su.email,
         password: su.password,
-        options: { data: { full_name: su.president_name, role: 'association', phone: su.phone } }
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            full_name: su.president_name,
+            role: 'association',
+            phone: su.phone,
+            assoc_name: su.name,   // ← يلتقطه التريغر لإنشاء سجل الجمعية
+          }
+        }
       })
       if (signErr) { setError('تعذّر إنشاء الحساب: ' + signErr.message); setLoading(false); return }
 
-      let userId = data?.user?.id
-      // ضمان وجود جلسة لإدراج سجل الجمعية (إن لم يُفعّل تأكيد البريد)
-      if (!data?.session) {
-        const { data: sIn } = await supabase.auth.signInWithPassword({ email: su.email, password: su.password })
-        userId = sIn?.user?.id || userId
-      }
-
-      if (userId) {
-        await supabase.from('associations').insert({
-          name: su.name, president_name: su.president_name,
-          phone: su.phone, email: su.email,
-          user_id: userId, is_active: false, status: 'pending'
-        })
-      }
-      await supabase.auth.signOut()
-      setSuccess('تم إرسال طلب تسجيل الجمعية بنجاح. سيتم تفعيل الحساب بعد مراجعة الإدارة واعتماده.')
+      setSuccess('تم إنشاء طلبك. أرسلنا رابط تأكيد إلى بريدك الإلكتروني — افتح البريد واضغط الرابط لتأكيد الحساب أولاً، ثم سيُراجَع طلبك من الإدارة قبل التفعيل.')
       setMode('login')
       setSu({ name:'', president_name:'', phone:'', email:'', password:'', confirm:'' })
     } catch (e) {
