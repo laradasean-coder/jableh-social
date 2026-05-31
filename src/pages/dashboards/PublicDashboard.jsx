@@ -389,7 +389,7 @@ export default function PublicDashboard() {
           </div>
           <div className="bg-gray-100 rounded-2xl overflow-hidden h-56 relative">
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d13243.6!2d35.93!3d35.36!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x152577e6cc18b155%3A0x0!2z2KzYqNmE2Kk!5e0!3m2!1sar!2s!4v1700000000000!5m2!1sar!2s"
+              src="https://maps.google.com/maps?q=جبلة+اللاذقية+سوريا&z=13&output=embed"
               width="100%" height="100%" style={{ border:0 }} allowFullScreen loading="lazy"
               title="موقع دائرة جبلة"
               referrerPolicy="no-referrer-when-downgrade"
