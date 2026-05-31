@@ -55,13 +55,24 @@ export default function SupportChat({ active = true, onUnread }) {
     return created?.id
   }, [isStaff])
 
+  // دمج الرسائل بالمعرّف (يمنع التكرار ولا يمحو رسالة مضافة محلياً)
+  const mergeMessages = useCallback((incoming) => {
+    setMessages(prev => {
+      const map = new Map(prev.map(m => [m.id, m]))
+      for (const m of incoming) map.set(m.id, m)
+      return Array.from(map.values()).sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      )
+    })
+  }, [])
+
   const fetchMessages = useCallback(async (tid) => {
     if (!tid) return
     const { data } = await supabase
       .from('support_messages').select('*')
       .eq('thread_id', tid).order('created_at', { ascending: true })
-    if (data) setMessages(data)
-  }, [])
+    if (data) mergeMessages(data)
+  }, [mergeMessages])
 
   useEffect(() => {
     if (!user) return
@@ -83,13 +94,13 @@ export default function SupportChat({ active = true, onUnread }) {
         event: 'INSERT', schema: 'public', table: 'support_messages',
         filter: `thread_id=eq.${tid}`
       }, (payload) => {
-        setMessages(p => [...p, payload.new])
+        mergeMessages([payload.new])
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
         if (!active && payload.new.is_staff) onUnread?.(n => (n || 0) + 1)
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [user, thread, isStaff, getOrCreateThread, fetchMessages, active, onUnread])
+  }, [user, thread, isStaff, getOrCreateThread, fetchMessages, mergeMessages, active, onUnread])
 
   useEffect(() => {
     if (active) {
@@ -118,7 +129,7 @@ export default function SupportChat({ active = true, onUnread }) {
       console.error('send message failed', sendErr)
       setError('تعذّر إرسال الرسالة: ' + sendErr.message)
     } else if (data) {
-      setMessages(p => [...p, data]); setText('')
+      mergeMessages([data]); setText('')
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     }
     setSending(false)
