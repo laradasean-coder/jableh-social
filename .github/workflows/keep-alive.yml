@@ -1,0 +1,26 @@
+# يُبقي مشروع Supabase نشطاً لمنع التجميد بعد أسبوع خمول
+# يعمل كل 3 أيام تلقائياً عبر GitHub Actions (مجاني)
+name: keep-supabase-alive
+
+on:
+  schedule:
+    - cron: '0 6 */3 * *'   # كل 3 أيام الساعة 6 صباحاً
+  workflow_dispatch:          # تشغيل يدوي عند الحاجة
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          echo "إرسال نبضة لإبقاء Supabase نشطاً..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/districts?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "رمز الاستجابة: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
+            echo "✓ Supabase نشط"
+          else
+            echo "⚠️ استجابة غير متوقعة"
+            exit 1
+          fi

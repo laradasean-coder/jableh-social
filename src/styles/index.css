@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Syria 2025 Brand Palette ──────────────────
+   Orontes Green:   #0D4A35  (primary)
+   Qasioun Gold:    #C9A227  (accent)
+   Basalt Black:    #1A1A1A
+   Palmyra Sand:    #E8D5A3
+   Mediterranean:   #1A5F7A
+   Ebla Bronze:     #8B5E3C
+────────────────────────────────────────────── */
+
+* { font-family: 'Cairo', 'Tajawal', sans-serif; }
+body { direction: rtl; }
+
+:root {
+  /* Syria identity colors */
+  --syria-green:   #0D4A35;
+  --syria-gold:    #C9A227;
+  --syria-gold-lt: #E8C84A;
+  --syria-black:   #1A1A1A;
+  --syria-sand:    #E8D5A3;
+  --syria-med:     #1A5F7A;
+
+  /* UI vars */
+  --bg-page:        #f8fafc;
+  --bg-card:        #ffffff;
+  --bg-input:       #ffffff;
+  --bg-secondary:   #f1f5f9;
+  --text-primary:   #111827;
+  --text-secondary: #6b7280;
+  --text-muted:     #9ca3af;
+  --border:         #e5e7eb;
+  --border-focus:   #0D4A35;
+  --header-from:    #062820;
+  --header-to:      #0D4A35;
+  --skeleton:       #e2e8f0;
+}
+
+:root.dark {
+  --bg-page:        #0a0f0d;
+  --bg-card:        #111a14;
+  --bg-input:       #111a14;
+  --bg-secondary:   #0a0f0d;
+  --text-primary:   #f0f4f0;
+  --text-secondary: #8fa896;
+  --text-muted:     #4a6b58;
+  --border:         #1e3528;
+  --border-focus:   #C9A227;
+  --header-from:    #030a06;
+  --header-to:      #0a2018;
+  --skeleton:       #1e3528;
+}
+
+body                { background: var(--bg-page); color: var(--text-primary); transition: background 0.2s, color 0.2s; }
+.card               { background: var(--bg-card); border-color: var(--border); }
+.input              { background: var(--bg-input); border-color: var(--border); color: var(--text-primary); }
+.input:focus        { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(13,74,53,0.15); }
+header              { background: linear-gradient(to left, var(--header-from), var(--header-to)) !important; }
+
+.dark .text-gray-800 { color: var(--text-primary) !important; }
+.dark .text-gray-700 { color: var(--text-primary) !important; }
+.dark .text-gray-600 { color: var(--text-secondary) !important; }
+.dark .text-gray-500 { color: var(--text-secondary) !important; }
+.dark .text-gray-400 { color: var(--text-muted) !important; }
+.dark .bg-white      { background: var(--bg-card) !important; }
+.dark .bg-gray-50    { background: var(--bg-secondary) !important; }
+.dark .bg-gray-100   { background: var(--bg-secondary) !important; }
+.dark .border-gray-100,.dark .border-gray-200 { border-color: var(--border) !important; }
+.dark .hover\:bg-gray-50:hover,.dark .hover\:bg-gray-100:hover { background: var(--bg-secondary) !important; }
+.dark .divide-gray-50 > * { border-color: var(--border); }
+
+/* Skeleton */
+.skeleton { background: var(--skeleton); animation: skpulse 1.5s ease-in-out infinite; border-radius: 0.75rem; }
+@keyframes skpulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* ─── Component classes ─────────────────────── */
+@layer components {
+  .btn-primary   {
+    @apply px-5 py-2.5 rounded-xl font-semibold shadow-sm active:scale-95 transition-all duration-200;
+    background: var(--syria-green);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #0a3d2b; }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .btn-gold {
+    @apply px-5 py-2.5 rounded-xl font-semibold shadow-sm active:scale-95 transition-all duration-200;
+    background: var(--syria-gold);
+    color: #1A1A1A;
+  }
+  .btn-gold:hover { background: var(--syria-gold-lt); }
+
+  .btn-secondary { @apply bg-white text-gray-700 px-5 py-2.5 rounded-xl hover:bg-gray-50 border border-gray-200 transition-all duration-200 font-semibold; }
+  .btn-danger    { @apply bg-red-600 text-white px-5 py-2.5 rounded-xl hover:bg-red-700 transition-all font-semibold; }
+  .card          { @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6; }
+  .input         { @apply w-full border border-gray-200 rounded-xl px-4 py-2.5 outline-none transition-all text-gray-800 bg-white; }
+  .label         { @apply block text-sm font-semibold text-gray-600 mb-1.5; }
+  .badge         { @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold; }
+
+  /* Syria brand header */
+  .syria-header  {
+    background: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 60%, #0F6040 100%);
+  }
+
+  /* Gold accent line */
+  .gold-accent { border-right: 4px solid var(--syria-gold); }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  header, footer { display: none !important; }
+  body { background: white !important; }
+  .card { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+}
+
+/* ─── تحسينات الجوال والحركات ─────────────────── */
+
+/* مساحة آمنة للحواف (notch) */
+@supports (padding: max(0px)) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* حركة دخول لوحة المركز العائم */
+.hub-panel { animation: hub-in 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes hub-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (min-width: 768px) {
+  .hub-panel { animation: hub-in-desktop 0.22s ease-out; }
+  @keyframes hub-in-desktop {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+}
+
+/* أهداف لمس مريحة على الجوال */
+@media (max-width: 767px) {
+  button, a, select, input[type="checkbox"], input[type="radio"] { touch-action: manipulation; }
+  .input { font-size: 16px; } /* يمنع تكبير iOS التلقائي عند التركيز */
+}
+
+/* تمرير أنعم */
+* { -webkit-tap-highlight-color: transparent; }
+html { scroll-behavior: smooth; }
+
+/* إخفاء شريط التمرير الأفقي للتنقّل */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* الوضع الليلي للوحات العائمة */
+.dark .hub-panel { background: var(--bg-card) !important; }
+.dark .hub-panel .bg-gray-50 { background: var(--bg-secondary) !important; }
+.dark nav.fixed.bottom-0 { background: var(--bg-card) !important; border-color: var(--border) !important; }
