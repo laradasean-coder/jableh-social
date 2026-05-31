@@ -389,7 +389,7 @@ export default function PublicDashboard() {
           </div>
           <div className="bg-gray-100 rounded-2xl overflow-hidden h-56 relative">
             <iframe
-              src="https://maps.google.com/maps?q=جبلة+اللاذقية+سوريا&z=13&output=embed"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=35.9185%2C35.3602%2C35.9345%2C35.3702&layer=mapnik&marker=35.3652129%2C35.9265412"
               width="100%" height="100%" style={{ border:0 }} allowFullScreen loading="lazy"
               title="موقع دائرة جبلة"
               referrerPolicy="no-referrer-when-downgrade"
@@ -397,7 +397,7 @@ export default function PublicDashboard() {
           </div>
         </div>
         <div className="mt-4 flex gap-3">
-          <a href="https://maps.google.com/?q=جبلة+اللاذقية+سوريا" target="_blank" rel="noreferrer"
+          <a href="https://maps.google.com/?q=35.3652129,35.9265412" target="_blank" rel="noreferrer"
             className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-semibold">
             <ExternalLink size={14}/> فتح في خرائط Google
           </a>
