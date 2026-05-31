@@ -232,7 +232,7 @@ export default function Layout() {
 
       {/* مركز المساعدة العائم الموحّد (دعم فني + مساعد ذكي) */}
       <FloatingHub
-        showSupport={isEnabled('chat_enabled') && !!user}
+        showSupport={isEnabled('chat_enabled') && !['admin','staff'].includes(profile?.role)}
         showAI={!!user && ['admin','staff'].includes(profile?.role)}
       />
       <InstallPWA/>
