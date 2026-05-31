@@ -17,6 +17,11 @@ export default function FloatingHub({ showSupport = true, showAI = false }) {
     showAI      && { key: 'ai',      label: 'المساعد الذكي', icon: Sparkles },
   ].filter(Boolean)
 
+  // التبويب الفعّال: لو لم يَعُد التبويب المختار متاحاً (تغيّر الدور بعد تحميل الملف)
+  // نرجع لأول تبويب متاح حتى لا تظهر اللوحة فارغة.
+  const available = tabs.map(t => t.key)
+  const activeTab = available.includes(tab) ? tab : (available[0] || 'support')
+
   return (
     <>
       {/* الزر العائم الوحيد */}
@@ -54,13 +59,13 @@ export default function FloatingHub({ showSupport = true, showAI = false }) {
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
                   <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-                    {tab === 'ai'
+                    {activeTab === 'ai'
                       ? <Sparkles size={18} style={{ color: '#E8C84A' }}/>
                       : <LifeBuoy size={18} style={{ color: '#E8C84A' }}/>}
                   </div>
                   <div>
                     <p className="font-bold text-sm leading-tight">
-                      {tab === 'ai' ? 'المساعد الذكي' : 'الدعم الفني'}
+                      {activeTab === 'ai' ? 'المساعد الذكي' : 'الدعم الفني'}
                     </p>
                     <p className="text-xs text-white/60">دائرة جبلة — في خدمتك</p>
                   </div>
@@ -78,9 +83,9 @@ export default function FloatingHub({ showSupport = true, showAI = false }) {
                   {tabs.map(t => (
                     <button key={t.key} onClick={() => setTab(t.key)}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-t-lg transition-colors
-                        ${tab === t.key ? 'bg-white text-[#0D4A35]' : 'text-white/70 hover:text-white hover:bg-white/10'}`}>
+                        ${activeTab === t.key ? 'bg-white text-[#0D4A35]' : 'text-white/70 hover:text-white hover:bg-white/10'}`}>
                       <t.icon size={14}/>{t.label}
-                      {t.key === 'support' && unread > 0 && tab !== 'support' && (
+                      {t.key === 'support' && unread > 0 && activeTab !== 'support' && (
                         <span className="w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">{unread}</span>
                       )}
                     </button>
@@ -92,12 +97,12 @@ export default function FloatingHub({ showSupport = true, showAI = false }) {
             {/* المحتوى — كلا اللوحتين تبقيان لكن نُظهر النشطة فقط لحفظ الحالة */}
             <div className="flex-1 min-h-0 relative">
               {showSupport && (
-                <div className={`absolute inset-0 ${tab === 'support' ? 'block' : 'hidden'}`}>
-                  <SupportChat active={open && tab === 'support'} onUnread={setUnread}/>
+                <div className={`absolute inset-0 ${activeTab === 'support' ? 'block' : 'hidden'}`}>
+                  <SupportChat active={open && activeTab === 'support'} onUnread={setUnread}/>
                 </div>
               )}
               {showAI && (
-                <div className={`absolute inset-0 ${tab === 'ai' ? 'block' : 'hidden'}`}>
+                <div className={`absolute inset-0 ${activeTab === 'ai' ? 'block' : 'hidden'}`}>
                   <AIAssistant/>
                 </div>
               )}
