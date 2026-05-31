@@ -113,3 +113,4 @@ src/
 supabase/migrations/
 └── 006_v8_improvements.sql ← NEW
 ```
+"# jableh-social" 
