@@ -24,22 +24,36 @@ export default function SupportChat({ active = true, onUnread }) {
   const bottomRef = useRef(null)
 
   const isStaff = profile?.role === 'admin' || profile?.role === 'staff'
+  const displayName = profile?.full_name || user?.email || 'زائر'
 
-  const getOrCreateThread = useCallback(async () => {
-    if (!user || isStaff) return null
+  // يضمن وجود جلسة: إن لم يكن المستخدم مسجّلاً يدخل كزائر مجهول (Anonymous)
+  // حتى يتمكّن عامة الناس من مراسلة الدعم دون إنشاء حساب.
+  const ensureSession = useCallback(async () => {
+    if (user) return user
+    const { data, error: anonErr } = await supabase.auth.signInAnonymously()
+    if (anonErr) {
+      console.error('anonymous sign-in failed', anonErr)
+      setError('تعذّر بدء جلسة الزائر: ' + anonErr.message)
+      return null
+    }
+    return data?.user || null
+  }, [user])
+
+  const getOrCreateThread = useCallback(async (uid, name) => {
+    if (!uid || isStaff) return null
     const { data: existing, error: selErr } = await supabase
       .from('support_threads').select('id')
-      .eq('user_id', user.id).eq('status', 'open')
+      .eq('user_id', uid).eq('status', 'open')
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (selErr) { console.error('thread lookup failed', selErr); setError('تعذّر الوصول إلى محادثاتك: ' + selErr.message); return null }
     if (existing) return existing.id
     const { data: created, error: insErr } = await supabase
       .from('support_threads')
-      .insert({ user_id: user.id, user_name: profile?.full_name || user.email })
+      .insert({ user_id: uid, user_name: name || 'زائر' })
       .select('id').single()
     if (insErr) { console.error('thread create failed', insErr); setError('تعذّر بدء المحادثة: ' + insErr.message); return null }
     return created?.id
-  }, [user, profile, isStaff])
+  }, [isStaff])
 
   const fetchMessages = useCallback(async (tid) => {
     if (!tid) return
@@ -55,7 +69,7 @@ export default function SupportChat({ active = true, onUnread }) {
     const init = async () => {
       if (!tid) {
         if (isStaff) return
-        tid = await getOrCreateThread()
+        tid = await getOrCreateThread(user.id, displayName)
         setThread(tid)
       }
       await fetchMessages(tid)
@@ -85,15 +99,18 @@ export default function SupportChat({ active = true, onUnread }) {
   }, [active, onUnread])
 
   const sendMessage = async () => {
-    if (!text.trim() || sending || !user) return
+    if (!text.trim() || sending) return
     setSending(true)
     setError('')
+    const sessUser = await ensureSession()
+    if (!sessUser) { setSending(false); return }
+    const name = profile?.full_name || sessUser.email || 'زائر'
     let tid = thread
-    if (!tid) { tid = await getOrCreateThread(); setThread(tid) }
+    if (!tid) { tid = await getOrCreateThread(sessUser.id, name); setThread(tid) }
     if (!tid) { setSending(false); return }
     const msg = {
-      thread_id: tid, sender_id: user.id,
-      sender_name: profile?.full_name || user.email,
+      thread_id: tid, sender_id: sessUser.id,
+      sender_name: name,
       content: text.trim(), is_staff: isStaff, is_read: false
     }
     const { data, error: sendErr } = await supabase.from('support_messages').insert(msg).select().single()
@@ -107,7 +124,7 @@ export default function SupportChat({ active = true, onUnread }) {
     setSending(false)
   }
 
-  if (!user) return null
+  if (isStaff) return null
 
   return (
     <div className="flex flex-col h-full min-h-0" dir="rtl">
