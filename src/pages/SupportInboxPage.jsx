@@ -20,14 +20,27 @@ export default function SupportInboxPage() {
   useEffect(() => {
     if (!profile || !['admin','staff'].includes(profile.role)) { navigate('/'); return }
     fetchThreads()
+    // اشتراك حيّ: أي محادثة جديدة أو رسالة واردة من الزوار تُحدّث القائمة فوراً
+    const ch = supabase.channel('inbox-threads')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_threads' }, () => fetchThreads())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_messages' }, () => fetchThreads())
+      .subscribe()
+    return () => supabase.removeChannel(ch)
   }, [profile])
 
   const fetchThreads = async () => {
     setLoading(true)
-    const { data } = await supabase
+    let { data, error } = await supabase
       .from('support_threads')
       .select('*, support_messages(count)')
       .order('updated_at', { ascending: false })
+    if (error) {
+      // تراجُع آمن لو فشل الدمج (count) لأي سبب
+      console.error('fetchThreads embed failed, falling back', error)
+      const res = await supabase.from('support_threads').select('*').order('updated_at', { ascending: false })
+      data = res.data; error = res.error
+      if (error) console.error('fetchThreads failed', error)
+    }
     if (data) setThreads(data)
     setLoading(false)
   }
