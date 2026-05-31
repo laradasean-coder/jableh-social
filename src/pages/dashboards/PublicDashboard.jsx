@@ -387,14 +387,15 @@ export default function PublicDashboard() {
               </div>
             ))}
           </div>
-          <div className="bg-gray-100 rounded-2xl overflow-hidden h-56 relative">
-            <iframe
-              src="https://www.openstreetmap.org/export/embed.html?bbox=35.9185%2C35.3602%2C35.9345%2C35.3702&layer=mapnik&marker=35.3652129%2C35.9265412"
-              width="100%" height="100%" style={{ border:0 }} allowFullScreen loading="lazy"
-              title="موقع دائرة جبلة"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
+          <a
+            href="https://maps.google.com/?q=35.3652129,35.9265412"
+            target="_blank" rel="noreferrer"
+            className="bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-2xl h-56 flex flex-col items-center justify-center gap-3 text-center transition-colors px-4"
+          >
+            <MapPin size={44} className="text-blue-600" />
+            <div className="font-bold text-gray-800">موقع دائرة جبلة على الخريطة</div>
+            <div className="text-sm text-gray-600">اضغط لفتح الموقع في خرائط Google</div>
+          </a>
         </div>
         <div className="mt-4 flex gap-3">
           <a href="https://maps.google.com/?q=35.3652129,35.9265412" target="_blank" rel="noreferrer"
