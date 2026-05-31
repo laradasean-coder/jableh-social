@@ -9,7 +9,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(
   supabaseUrl     || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder'
+  supabaseAnonKey || 'placeholder',
+  {
+    // تعطيل قفل المصادقة (navigator.locks) المسبّب للتجمّد/الاستثناء أثناء الدخول
+    auth: { lock: async (_name, _acquireTimeout, fn) => fn() }
+  }
 )
 
 export default supabase
