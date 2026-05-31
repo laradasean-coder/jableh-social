@@ -84,9 +84,28 @@ export default function AssociationsPage() {
   }
 
   const rejectAssoc = async (a) => {
-    if (!confirm(`رفض طلب الجمعية "${a.name}"؟`)) return
-    await supabase.from('associations').update({ status: 'rejected', is_active: false }).eq('id', a.id)
-    setAssociations(prev => prev.map(x => x.id===a.id ? { ...x, status:'rejected', is_active:false } : x))
+    if (!confirm(`رفض طلب الجمعية "${a.name}" وحذف حسابه نهائياً؟`)) return
+
+    // بيانات تجريبية فقط (لا مستخدم فعلي)
+    if (String(a.id).startsWith('mock-')) {
+      setAssociations(prev => prev.filter(x => x.id !== a.id))
+      return
+    }
+
+    if (a.user_id) {
+      // حذف المستخدم نهائياً عبر دالة الخدمة؛ يُحذف الملف وسجل الجمعية تلقائياً (Cascade)
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'delete', user_id: a.user_id }
+      })
+      if (error || data?.error) {
+        alert('تعذّر حذف الحساب: ' + (data?.error || error?.message || 'خطأ غير معروف'))
+        return
+      }
+    } else {
+      // لا مستخدم مرتبط: احذف سجل الجمعية فقط
+      await supabase.from('associations').delete().eq('id', a.id)
+    }
+    setAssociations(prev => prev.filter(x => x.id !== a.id))
   }
 
   const handleLogin = (assocId) => {
