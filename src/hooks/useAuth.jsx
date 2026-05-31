@@ -65,11 +65,14 @@ export function AuthProvider({ children }) {
       const { data } = await supabase.from('profiles')
         .select('*').eq('id', userId).maybeSingle()
 
-      // منع دخول الجمعيات قيد المراجعة (نُفّذ هنا مركزياً بدل صفحة الدخول)
+      // منع دخول الجمعيات غير المعتمدة (فشل مغلق): لا يُسمح بالدخول إلا
+      // لجمعية لها سجل معتمد وفعّال صراحةً. غياب السجل أو حالة pending/rejected
+      // أو is_active=false ⇒ حجب فوري وتسجيل خروج.
       if (data?.role === 'association') {
         const { data: assoc } = await supabase.from('associations')
           .select('status,is_active').eq('user_id', userId).maybeSingle()
-        if (assoc && (assoc.status === 'pending' || assoc.is_active === false)) {
+        const approved = !!assoc && assoc.status === 'approved' && assoc.is_active === true
+        if (!approved) {
           await supabase.auth.signOut()
           setUser(null); setProfile(null); setLoading(false)
           return
