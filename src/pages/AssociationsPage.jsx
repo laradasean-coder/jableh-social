@@ -84,28 +84,9 @@ export default function AssociationsPage() {
   }
 
   const rejectAssoc = async (a) => {
-    if (!confirm(`رفض طلب الجمعية "${a.name}" وحذف حسابه نهائياً؟`)) return
-
-    // بيانات تجريبية فقط (لا مستخدم فعلي)
-    if (String(a.id).startsWith('mock-')) {
-      setAssociations(prev => prev.filter(x => x.id !== a.id))
-      return
-    }
-
-    if (a.user_id) {
-      // حذف المستخدم نهائياً عبر دالة الخدمة؛ يُحذف الملف وسجل الجمعية تلقائياً (Cascade)
-      const { data, error } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'delete', user_id: a.user_id }
-      })
-      if (error || data?.error) {
-        alert('تعذّر حذف الحساب: ' + (data?.error || error?.message || 'خطأ غير معروف'))
-        return
-      }
-    } else {
-      // لا مستخدم مرتبط: احذف سجل الجمعية فقط
-      await supabase.from('associations').delete().eq('id', a.id)
-    }
-    setAssociations(prev => prev.filter(x => x.id !== a.id))
+    if (!confirm(`رفض طلب الجمعية "${a.name}"؟`)) return
+    await supabase.from('associations').update({ status: 'rejected', is_active: false }).eq('id', a.id)
+    setAssociations(prev => prev.map(x => x.id===a.id ? { ...x, status:'rejected', is_active:false } : x))
   }
 
   const handleLogin = (assocId) => {
@@ -125,32 +106,51 @@ export default function AssociationsPage() {
   }
 
   const saveEdit = async () => {
-    const updated = {
-      ...editForm,
-      services: typeof editForm.services === 'string'
-        ? editForm.services.split('،').map(s=>s.trim()).filter(Boolean)
-        : editForm.services
+    const services = typeof editForm.services === 'string'
+      ? editForm.services.split('،').map(s=>s.trim()).filter(Boolean)
+      : (editForm.services || [])
+    const payload = {
+      name: editForm.name, president_name: editForm.president_name, phone: editForm.phone,
+      email: editForm.email, address: editForm.address, description: editForm.description,
+      services
     }
-    if (!editForm.id.startsWith('mock-')) {
-      await supabase.from('associations').update({
-        name:updated.name, president_name:updated.president_name, phone:updated.phone,
-        email:updated.email, address:updated.address, description:updated.description,
-        services:updated.services
-      }).eq('id', editForm.id)
+    const isMock = String(editForm.id).startsWith('mock-')
+    if (isMock) {
+      // الجمعية الافتراضية ليست في القاعدة بعد — نُدرجها لأول مرة فتصبح حقيقية وتُحفظ
+      const { data, error } = await supabase.from('associations')
+        .insert({ ...payload, username: editForm.username || null, is_active: true, status: 'approved' })
+        .select().single()
+      if (error) { alert('تعذّر حفظ الجمعية: ' + error.message); return }
+      setAssociations(prev => prev.map(a => a.id===editForm.id ? data : a))
+    } else {
+      const { error } = await supabase.from('associations').update(payload).eq('id', editForm.id)
+      if (error) { alert('تعذّر حفظ التعديل: ' + error.message); return }
+      setAssociations(prev => prev.map(a => a.id===editForm.id ? { ...a, ...payload } : a))
     }
-    setAssociations(prev => prev.map(a => a.id===editForm.id ? updated : a))
     setShowEdit(false)
+    fetchAssociations()
+  }
+
+  const handleDelete = async (a) => {
+    if (!confirm(`حذف الجمعية "${a.name}" نهائياً؟ لا يمكن التراجع.`)) return
+    if (!String(a.id).startsWith('mock-')) {
+      const { error } = await supabase.from('associations').delete().eq('id', a.id)
+      if (error) { alert('تعذّر حذف الجمعية: ' + error.message); return }
+    }
+    setAssociations(prev => prev.filter(x => x.id !== a.id))
+    if (loggedIn === a.id) setLoggedIn('admin')
   }
 
   const handleAdd = async () => {
     const services = addForm.services.split('،').map(s=>s.trim()).filter(Boolean)
     const { data, error } = await supabase.from('associations').insert({
-      ...addForm, services, is_active: true
+      ...addForm, services, is_active: true, status: 'approved'
     }).select().single()
-    if (!error && data) setAssociations(prev => [...prev, data])
-    else setAssociations(prev => [...prev, { id:'mock-'+Date.now(), ...addForm, services, is_active:true }])
+    if (error) { alert('تعذّر إضافة الجمعية: ' + error.message); return }
+    if (data) setAssociations(prev => [...prev, data])
     setShowAdd(false)
     setAddForm({ name:'', president_name:'', phone:'', email:'', address:'', description:'', services:'', username:'', password:'' })
+    fetchAssociations()
   }
 
   const sendAccessRequest = async () => {
@@ -287,6 +287,12 @@ h1{font-size:20px;font-weight:700;color:#1d4ed8;margin-bottom:4px}
                       className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium">
                       <Printer size={13}/> طباعة
                     </button>
+                    {loggedIn === 'admin' && (
+                      <button onClick={() => handleDelete(a)}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-sm font-medium">
+                        <Trash2 size={13}/> حذف
+                      </button>
+                    )}
                     {loggedIn !== 'admin' && (
                       <button onClick={() => setLoggedIn(null)}
                         className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-sm font-medium">
