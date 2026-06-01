@@ -121,17 +121,47 @@ export default function RuralUnitsPage() {
   const scopedUnitName = profile?.role === 'unit_head' ? profile?.unit_name : null
 
   useEffect(() => {
+    fetchUnits()
+    loadUnitStats()
+  }, [profile])
+
+  useEffect(() => {
     if (isAdmin) setLoggedIn('all')
     if (scopedUnitName) {
       const own = (units || INITIAL_UNITS).find(u => u.name === scopedUnitName)
       if (own) setLoggedIn(own.id)
     }
-    // Load stats per unit
-    loadUnitStats()
   }, [profile, units])
 
   // قائمة الوحدات المعروضة (محصورة لرئيس الوحدة)
   const shownUnits = scopedUnitName ? units.filter(u => u.name === scopedUnitName) : units
+
+  // ── جلب الوحدات من قاعدة البيانات (أونلاين) مع دمج الحقول المرئية فقط ──
+  const fetchUnits = async () => {
+    const { data, error } = await supabase.from('rural_units').select('*').order('name')
+    if (error || !data || data.length === 0) { setUnits(INITIAL_UNITS); return }
+    // صور الوحدات من جدول unit_images
+    const { data: imgs } = await supabase.from('unit_images').select('unit_name, image_url, caption')
+    const imgByUnit = {}
+    ;(imgs || []).forEach(i => { (imgByUnit[i.unit_name] ||= []).push({ url: i.image_url, caption: i.caption || '' }) })
+    const palette = ['#3B82F6','#10B981','#F59E0B','#8B5CF6','#EF4444','#06B6D4']
+    const mapped = data.map((row, i) => {
+      const seed = INITIAL_UNITS.find(s => s.name === row.name) || {}
+      return {
+        ...row,
+        services: Array.isArray(row.services) ? row.services : [],
+        projects: (Array.isArray(row.projects) ? row.projects : [])
+          .map(p => typeof p === 'string' ? { name: p, progress: 50 } : p),
+        // حقول مرئية فقط (غير مخزّنة في الجدول): تُدمج من الثابت أو افتراضي
+        username: seed.username || (row.name || '').replace(/\s/g,'').slice(0,12),
+        password: seed.password ?? '',
+        color: seed.color || palette[i % palette.length],
+        cover_url: seed.cover_url || '',
+        images: imgByUnit[row.name] || [],
+      }
+    })
+    setUnits(mapped)
+  }
 
   const loadUnitStats = async () => {
     const { data } = await supabase.from('unit_employees').select('unit_name')
@@ -147,13 +177,13 @@ export default function RuralUnitsPage() {
   const getFields = (uid) => fieldCfg[uid] || DEFAULT_FIELDS
 
   const fetchEmps = useCallback(async (uid) => {
-    const unit = INITIAL_UNITS.find(u=>u.id===uid)
+    const unit = units.find(u=>u.id===uid)
     if (!unit) return
     setEmpLoading(p=>({...p,[uid]:true}))
     const { data } = await supabase.from('unit_employees').select('*').eq('unit_name',unit.name).order('created_at')
     if (data) setEmployees(p=>({...p,[uid]:data}))
     setEmpLoading(p=>({...p,[uid]:false}))
-  }, [])
+  }, [units])
 
   const handleLogin = (uid) => {
     const u = units.find(x=>x.id===uid)
@@ -241,13 +271,27 @@ export default function RuralUnitsPage() {
   }
 
   const saveEdit = async () => {
-    const updated = {
-      ...editForm,
-      services: editForm.services.split('،').map(s=>s.trim()).filter(Boolean),
-      projects: editForm.projects.split('،').map(s=>s.trim()).filter(Boolean).map(name=>({name,progress:50})),
+    const services = editForm.services.split('،').map(s=>s.trim()).filter(Boolean)
+    const projectNames = editForm.projects.split('،').map(s=>s.trim()).filter(Boolean)
+    // الحقول المخزّنة فعلاً في جدول rural_units
+    const dbPayload = {
+      name: editForm.name, location: editForm.location, description: editForm.description,
+      head_name: editForm.head_name, phone: editForm.phone,
+      services, projects: projectNames
     }
-    setUnits(prev=>prev.map(u=>u.id===editForm.id?updated:u))
+    if (!String(editForm.id).startsWith('unit-')) {
+      const { error } = await supabase.from('rural_units').update(dbPayload).eq('id', editForm.id)
+      if (error) {
+        alert('تعذّر حفظ التعديل: ' + error.message + '\nتأكد من تشغيل ملف الصلاحيات (022) في قاعدة البيانات.')
+        return
+      }
+    }
+    // تحديث محلي (مع إبقاء الحقول المرئية كاللون والدخول)
+    setUnits(prev => prev.map(u => u.id===editForm.id ? {
+      ...u, ...dbPayload, projects: projectNames.map(name=>({name,progress:50}))
+    } : u))
     setShowEdit(false)
+    fetchUnits()
   }
 
   return (
