@@ -26,10 +26,11 @@ export default function SupportChat({ active = true, onUnread }) {
   const isStaff = profile?.role === 'admin' || profile?.role === 'staff'
   const displayName = profile?.full_name || user?.email || 'زائر'
 
-  // يضمن وجود جلسة: إن لم يكن المستخدم مسجّلاً يدخل كزائر مجهول (Anonymous)
-  // حتى يتمكّن عامة الناس من مراسلة الدعم دون إنشاء حساب.
+  // يضمن وجود جلسة ثابتة: يقرأ الجلسة الفعلية أولاً (لا يعتمد على حالة user التي قد
+  // تتأخّر) فلا يُنشئ زائراً مجهولاً جديداً في كل مرة. عامة الناس يراسلون دون حساب.
   const ensureSession = useCallback(async () => {
-    if (user) return user
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) return session.user
     const { data, error: anonErr } = await supabase.auth.signInAnonymously()
     if (anonErr) {
       console.error('anonymous sign-in failed', anonErr)
@@ -37,7 +38,7 @@ export default function SupportChat({ active = true, onUnread }) {
       return null
     }
     return data?.user || null
-  }, [user])
+  }, [])
 
   const getOrCreateThread = useCallback(async (uid, name) => {
     if (!uid || isStaff) return null
