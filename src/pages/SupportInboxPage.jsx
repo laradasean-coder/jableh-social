@@ -37,11 +37,12 @@ export default function SupportInboxPage() {
     let { data, error } = await supabase
       .from('support_threads')
       .select('*, support_messages(count)')
+      .eq('status', 'open')
       .order('updated_at', { ascending: false })
     if (error) {
-      // تراجُع آمن لو فشل الدمج (count) لأي سبب
       console.error('fetchThreads embed failed, falling back', error)
-      const res = await supabase.from('support_threads').select('*').order('updated_at', { ascending: false })
+      const res = await supabase.from('support_threads').select('*')
+        .eq('status', 'open').order('updated_at', { ascending: false })
       data = res.data; error = res.error
       if (error) console.error('fetchThreads failed', error)
     }
@@ -102,7 +103,9 @@ export default function SupportInboxPage() {
   }
 
   const closeThread = async (id) => {
-    await supabase.from('support_threads').update({ status: 'closed' }).eq('id', id)
+    if (!confirm('إغلاق هذه المحادثة وإخفاؤها من القائمة؟')) return
+    const { error } = await supabase.from('support_threads').update({ status: 'closed' }).eq('id', id)
+    if (error) { alert('تعذّر إغلاق المحادثة: ' + error.message); return }
     setThreads(p => p.filter(t => t.id !== id))
     if (active?.id === id) { setActive(null); setMessages([]) }
   }
