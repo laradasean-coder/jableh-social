@@ -112,10 +112,16 @@ export default function ReliefAdminPage() {
 
   const advance = async (r, newStatus) => {
     setProcessing(true)
-    await supabase.from('relief_requests').update({
+    const { error } = await supabase.from('relief_requests').update({
       status: newStatus,
       ...(newStatus === 'transferred' ? { transferred_to: null } : {})
     }).eq('id', r.id)
+    if (error) {
+      console.error('relief status update failed', error)
+      alert('تعذّر تحديث حالة الطلب: ' + error.message + '\nتأكد من تشغيل ملف الصلاحيات (021) في قاعدة البيانات.')
+      setProcessing(false)
+      return
+    }
     if (note.trim()) {
       await supabase.from('audit_logs').insert({
         action: newStatus === 'transferred' ? 'transfer' : newStatus === 'rejected' ? 'reject' : 'update',
